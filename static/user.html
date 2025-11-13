@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Usuario</title>
+</head>
+<body>
+  <h2>Bienvenido Usuario</h2>
+  <button onclick="logout()">Cerrar sesión</button>
+
+  <script>
+    console.log("TOKEN JWT (admin):", localStorage.getItem("token"));
+
+    function logout() {
+      localStorage.removeItem("token");
+      window.location.href = "/static/index.html";
+    }
+  </script>
+</body>
+</html>

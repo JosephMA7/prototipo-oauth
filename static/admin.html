@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Panel de Admin</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    table {
+      width: 100%;
+      margin-top: 20px;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 10px;
+      border: 1px solid #ccc;
+      text-align: center;
+    }
+
+    th {
+      background-color: #3498db;
+      color: white;
+    }
+
+    tbody tr:nth-child(even) {
+      background-color: #f2f2f2;
+    }
+
+    .logout-btn, .crear-btn {
+      margin-top: 20px;
+    }
+
+    input, select {
+      margin: 5px;
+      padding: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Bienvenido Administrador</h2>
+    <button class="logout-btn" onclick="logout()">Cerrar sesión</button>
+
+    <h3>Usuarios registrados:</h3>
+    <table>
+      <thead>
+        <tr><th>Usuario</th><th>Rol</th></tr>
+      </thead>
+      <tbody id="tabla-usuarios"></tbody>
+    </table>
+
+    <h3>Crear nuevo usuario:</h3>
+    <input type="text" id="nuevo-usuario" placeholder="Usuario">
+    <input type="password" id="nuevo-pass" placeholder="Contraseña">
+    <select id="nuevo-rol">
+      <option value="estudiante">Estudiante</option>
+      <option value="profesor">Profesor</option>
+      <option value="admin">Administrador</option>
+    </select>
+    <button class="crear-btn" onclick="crearUsuario()">Crear</button>
+  </div>
+
+  <script>
+    const token = localStorage.getItem("token");
+    console.log("TOKEN JWT (admin):", token);
+
+    async function cargarUsuarios() {
+      const res = await fetch("http://localhost:8000/usuarios", {
+        headers: { "Authorization": "Bearer " + token }
+      });
+
+      const data = await res.json();
+      const tabla = document.getElementById("tabla-usuarios");
+      tabla.innerHTML = "";
+      data.forEach(u => {
+        tabla.innerHTML += `<tr><td>${u.username}</td><td>${u.role}</td></tr>`;
+      });
+    }
+
+    async function crearUsuario() {
+      const username = document.getElementById("nuevo-usuario").value;
+      const password = document.getElementById("nuevo-pass").value;
+      const role = document.getElementById("nuevo-rol").value;
+
+      const res = await fetch("http://localhost:8000/crear_usuario", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + token
+        },
+        body: JSON.stringify({ username, password, role })
+      });
+
+      const data = await res.json();
+      alert(data.msg || data.detail);
+      cargarUsuarios();
+    }
+
+    function logout() {
+      localStorage.removeItem("token");
+      window.location.href = "/static/index.html";
+    }
+
+    cargarUsuarios();
+
+    function logout() {
+    localStorage.removeItem('token');
+    // (opcional) también limpiar pkce_verifier por higiene
+    localStorage.removeItem('pkce_verifier');
+    localStorage.removeItem('oauth_state');
+    location.href = '/static/index.html';
+  }
+  </script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Inicio de sesión</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link rel="stylesheet" href="style.css">
+
+</head>
+<body>
+  <div class="container">
+    <h2>Plataforma Educativa</h2>
+    <form id="authForm" method="post" action="/oauth/authorize" autocomplete="off">
+
+      <input type="text" name="username" placeholder="Usuario" required>
+      <input type="password" name="password" placeholder="Contraseña" required>
+
+      <input type="hidden" name="client_id" value="edu_client">
+      <input type="hidden" name="redirect_uri" id="redirect_uri">
+      <input type="hidden" name="state" id="state">
+      <input type="hidden" name="code_challenge" id="code_challenge">
+      <input type="hidden" name="code_challenge_method" value="S256">
+
+      <div style="margin-top:12px">
+        <button id="submitBtn" class="btn" type="submit">Iniciar sesión (OAuth)</button>
+      </div>
+    </form>
+  </div>
+  <script>
+    //2
+    // ===== PKCE =====
+    function base64url(bytes){
+      let b=""; const l=bytes.byteLength||bytes.length;
+      for(let i=0;i<l;i++) b+=String.fromCharCode(bytes[i]);
+      return btoa(b).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+/g,"");
+    }
+    'Calcula el hash SHA-256 de una cadena.'
+    async function sha256(str){
+      const enc=new TextEncoder().encode(str);
+      const digest=await crypto.subtle.digest("SHA-256", enc);
+      return new Uint8Array(digest);
+    }
+    function randomString(len=64){
+      const ch="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
+      let s=""; for(let i=0;i<len;i++) s+=ch[Math.floor(Math.random()*ch.length)];
+      return s;
+    }
+
+    // Limpiar residuos en ESTA pestaña
+    sessionStorage.removeItem("oauth_state");
+    sessionStorage.removeItem("pkce_verifier");
+
+    // Rellena el redirect_uri EXACTO registrado
+    document.getElementById('redirect_uri').value =
+      `${location.origin}/static/oauth_callback.html`;
+
+    const form = document.getElementById('authForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const stateInput = document.getElementById('state');
+    const challengeInput = document.getElementById('code_challenge');
+
+    let inFlight = false;
+    form.addEventListener('submit', async (e) => {
+      if (inFlight) { e.preventDefault(); return; }
+      e.preventDefault();
+      inFlight = true;
+      submitBtn.disabled = true;
+
+      try {
+        // 1) Generar STATE + PKCE
+        const state = randomString(16);
+        const verifier = randomString(64);
+        const challenge = await sha256(verifier).then(base64url);
+
+        // 2) Guardar en sessionStorage (misma pestaña)
+        sessionStorage.setItem("oauth_state", state);
+        sessionStorage.setItem("pkce_verifier", verifier);
+
+        // 3) Inyecta en el form y enviar
+        stateInput.value = state;
+        challengeInput.value = challenge;
+
+        form.submit();
+      } catch (err) {
+        console.error(err);
+        alert("Error preparando PKCE/STATE");
+        inFlight = false;
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

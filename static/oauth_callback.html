@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Callback OAuth</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body{font-family:system-ui,Arial,sans-serif;max-width:900px;margin:32px auto;padding:0 16px}
+    pre{background:#f6f6f6;padding:12px;border-radius:8px;white-space:pre-wrap}
+    .row{margin:12px 0}
+    button{padding:10px 16px;border-radius:8px;border:1px solid #444;cursor:pointer}
+  </style>
+</head>
+<body>
+  <div id="msg" class="row"></div>
+  <div id="debug" class="row"></div>
+
+  <script>
+    //6 Canjea el authorization code por access_token
+    async function exchangeAndRedirect() {
+      // 1) Toma el code y verifier
+      const params = new URLSearchParams(location.search);
+      const code = params.get('code');
+      const verifier = sessionStorage.getItem('pkce_verifier');
+      const redirect_uri = `${location.origin}/static/oauth_callback.html`;
+
+      // 2) Construir el cuerpo para /oauth/token (grant authorization_code)
+      const body = new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri,
+        client_id: 'edu_client',
+        code_verifier: verifier
+      });
+
+      // 3) Canje: POST /oauth/token
+      const tokenRes = await fetch(`${location.origin}/oauth/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString()
+      });
+      const tokenJson = await tokenRes.json();
+
+      // 4) Validaciones de respuesta
+      if (!tokenRes.ok) {
+        alert(tokenJson.detail || 'Error en canje de token');
+        return;
+      }
+      const accessToken = tokenJson.access_token;
+      if (!accessToken) { alert('No vino access_token'); return; }
+
+      // 5) Guardar token y limpiar secretos temporales
+      localStorage.setItem('token', accessToken);
+      sessionStorage.removeItem('pkce_verifier'); // higiene: ya no se usa
+
+      // 6) Obtener perfil/rol y redirigir
+      const meRes = await fetch(`${location.origin}/me`, {
+        headers: { Authorization: 'Bearer ' + accessToken }
+      });
+      const me = await meRes.json();
+      if (!meRes.ok) { alert('Error en /me'); return; }
+
+      const rol = me.rol || me.role;
+      if (rol === 'admin') location.href = '/static/admin.html';
+      else if (rol === 'profesor') location.href = '/static/profesor.html';
+      else if (rol === 'estudiante') location.href = '/static/estudiante.html';
+      else alert('Rol no reconocido');
+    }
+
+    // 4
+    (async () => {
+      // 0) Referencias a zonas de mensaje (opcionales)
+      const $msg = document.getElementById('msg');
+      const $debug = document.getElementById('debug');
+
+      // 1) Verificar que venga ?code=... en la URL
+      const params = new URLSearchParams(location.search);
+      const code = params.get('code');
+      const stateReturned = params.get('state');
+      if (!code) { alert('Falta "code" en la URL'); return; }
+
+      // 2) Validar STATE (anti-CSRF): comparar ida vs vuelta
+      const stateStored =
+        sessionStorage.getItem('oauth_state') ?? localStorage.getItem('oauth_state');
+
+      // 3) Higiene: limpiar el state guardado, haya o no coincidencia
+      sessionStorage.removeItem('oauth_state');
+      localStorage.removeItem('oauth_state');
+
+      // 4) Si el state no coincide, bloquear (seguro para producción)
+      if (!stateReturned || !stateStored || stateReturned !== stateStored) {
+        $msg.innerHTML = `<h2>State inválido</h2>
+          <p>No coincide el identificador de sesión. Por seguridad, se detiene el flujo.</p>`;
+        $debug.innerHTML = `<pre>stateReturned: ${stateReturned || '(null)'}
+stateStored:   ${stateStored || '(null)'}
+origin:        ${location.origin}</pre>`;
+        // En producción NO continuamos; el usuario debe reiniciar desde el index
+        return;
+      }
+
+      // 5) State ok → continuar con canje + redirección
+      await exchangeAndRedirect();
+    })();
+  </script>
+</body>
+</html>

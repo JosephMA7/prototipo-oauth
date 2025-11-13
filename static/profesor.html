@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Profesor</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h2>Bienvenido Profesor</h2>
+    <p>Has iniciado sesión correctamente con el rol de <strong>profesor</strong>.</p>
+
+    <h3>Ingresar Nota para Estudiante</h3>
+    <form id="nota-form">
+      <label for="estudiante">Estudiante:</label>
+      <input type="text" id="estudiante" required><br><br>
+
+      <label for="tarea">Tarea:</label>
+      <input type="text" id="tarea" required><br><br>
+
+      <label for="nota">Nota:</label>
+      <input type="number" step="0.1" id="nota" required><br><br>
+
+      <label for="observaciones">Observaciones:</label>
+      <input type="text" id="observaciones"><br><br>
+
+      <button type="submit">Guardar Nota</button>
+    </form>
+
+    <button onclick="logout()">Cerrar sesión</button>
+  </div>
+
+  <script>
+    const token = localStorage.getItem("token");
+
+    function logout() {
+      localStorage.removeItem("token");
+      window.location.href = "/static/index.html";
+    }
+
+    document.getElementById("nota-form").addEventListener("submit", async function(e) {
+      e.preventDefault();
+
+      const estudiante = document.getElementById("estudiante").value;
+      const tarea = document.getElementById("tarea").value;
+      const nota = parseFloat(document.getElementById("nota").value);
+      const observaciones = document.getElementById("observaciones").value;
+
+      const response = await fetch("http://localhost:8000/notas", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + token
+        },
+        body: JSON.stringify({ estudiante, tarea, nota, observaciones })
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        alert("Nota registrada correctamente.");
+        document.getElementById("nota-form").reset();
+      } else {
+        alert("Error: " + data.detail);
+      }
+    });
+    
+    function logout() {
+    localStorage.removeItem('token');
+    // (opcional) también limpiar pkce_verifier por higiene
+    localStorage.removeItem('pkce_verifier');
+    localStorage.removeItem('oauth_state');
+    location.href = '/static/index.html';
+  }
+  </script>
+</body>
+</html>

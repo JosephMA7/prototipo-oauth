@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Panel del Estudiante</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    table {
+      margin-top: 15px;
+      border-collapse: collapse;
+      width: 100%;
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #ccc;
+    }
+    th {
+      background-color: #2c3e50;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Bienvenido Estudiante</h2>
+    <p>Has iniciado sesión correctamente con el rol de <strong>estudiante</strong>.</p>
+
+    <button onclick="logout()">Cerrar sesión</button>
+
+    <h3>📄 Mis Notas</h3>
+    <button onclick="verNotas()">Ver mis notas</button>
+
+    <table id="tabla-notas" style="display:none;">
+      <thead>
+        <tr><th>Tarea</th><th>Nota</th><th>Observaciones</th></tr>
+      </thead>
+      <tbody id="cuerpo-notas"></tbody>
+    </table>
+  </div>
+
+  <script>
+    const token = localStorage.getItem("token");
+
+    function logout() {
+      localStorage.removeItem("token");
+      window.location.href = "/static/index.html";
+    }
+
+    async function verNotas() {
+      const res = await fetch("http://localhost:8000/mis_notas", {
+        headers: { "Authorization": "Bearer " + token }
+      });
+
+      const notas = await res.json();
+      const tabla = document.getElementById("tabla-notas");
+      const cuerpo = document.getElementById("cuerpo-notas");
+
+      cuerpo.innerHTML = "";
+      notas.forEach(n => {
+        cuerpo.innerHTML += `<tr><td>${n.tarea}</td><td>${n.nota}</td><td>${n.observaciones}</td></tr>`;
+      });
+
+      tabla.style.display = "table";
+    }
+    <button onclick="logout()">Cerrar sesión</button>
+
+  function logout() {
+    localStorage.removeItem('token');
+    // (opcional) también limpiar pkce_verifier por higiene
+    localStorage.removeItem('pkce_verifier');
+    localStorage.removeItem('oauth_state');
+    location.href = '/static/index.html';
+  }
+
+
+  </script>
+</body>
+</html>
