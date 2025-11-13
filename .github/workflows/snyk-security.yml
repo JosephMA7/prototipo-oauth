@@ -1,0 +1,39 @@
+name: Snyk Security Scan
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install Snyk
+        run: npm install -g snyk
+
+      - name: Auth Snyk
+        run: snyk auth ${{ secrets.SNYK_TOKEN }}
+
+      # Escaneo de dependencias (requirements.txt)
+      - name: Snyk Open Source Test
+        run: snyk test --file=requirements.txt || true
+
+      # Escaneo de código (Snyk Code)
+      - name: Snyk Code Test
+        run: snyk code test || true
