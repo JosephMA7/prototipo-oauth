@@ -87,13 +87,25 @@
       sessionStorage.removeItem('oauth_state');
       localStorage.removeItem('oauth_state');
 
-      // 4) Si el state no coincide, bloquear (seguro para producción)
+            // 4) Si el state no coincide, bloquear (seguro para producción)
       if (!stateReturned || !stateStored || stateReturned !== stateStored) {
+        // Este bloque es estático, aquí no hay datos del usuario
         $msg.innerHTML = `<h2>State inválido</h2>
           <p>No coincide el identificador de sesión. Por seguridad, se detiene el flujo.</p>`;
-        $debug.innerHTML = `<pre>stateReturned: ${stateReturned || '(null)'}
-stateStored:   ${stateStored || '(null)'}
-origin:        ${location.origin}</pre>`;
+
+        // 👇 Versión segura: no usamos innerHTML con datos de la URL
+        const debugLines = [
+          `stateReturned: ${stateReturned || '(null)'}`,
+          `stateStored:   ${stateStored || '(null)'}`,
+          `origin:        ${location.origin}`,
+        ].join('\n');
+
+        const pre = document.createElement('pre');
+        pre.textContent = debugLines;    // ← esto escapa cualquier HTML
+
+        $debug.innerHTML = '';          // limpia cualquier contenido anterior
+        $debug.appendChild(pre);        // inserta el <pre> seguro en el DOM
+
         // En producción NO continuamos; el usuario debe reiniciar desde el index
         return;
       }
