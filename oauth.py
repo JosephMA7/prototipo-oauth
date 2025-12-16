@@ -7,6 +7,8 @@ import secrets, hashlib, base64
 import bcrypt
 from auth import generar_token
 from fastapi.responses import RedirectResponse
+from urllib.parse import urlencode
+
 
 router = APIRouter()
 
@@ -56,12 +58,24 @@ async def authorize_post(
         "code_challenge": code_challenge,
         "expires_at": expires
     })
-
+#OPCION MAL DE LA VULNERABILIDAD DE CODEQL
     # 4) Redirigir al callback con code + state
-    redirect = f"{redirect_uri}?code={code}"
+    #redirect = f"{redirect_uri}?code={code}"
+    #if state:
+        #redirect += f"&state={state}"
+    #return RedirectResponse(url=redirect, status_code=303)  
+    
+#OPCION CORREGUIDA
+    # 4) Redirigir al callback con code + state (usar redirect_uri confiable desde BD)
+    safe_redirect_uri = client["redirect_uri"]  # <- NO usar el redirect_uri del Form
+
+    query = {"code": code}
     if state:
-        redirect += f"&state={state}"
-    return RedirectResponse(url=redirect, status_code=303)  
+        query["state"] = state
+
+    redirect = f"{safe_redirect_uri}?{urlencode(query)}"
+    return RedirectResponse(url=redirect, status_code=303)
+
 
 # 5=== Canje code -> access_token (valida PKCE) ===
 @router.post("/oauth/token")
